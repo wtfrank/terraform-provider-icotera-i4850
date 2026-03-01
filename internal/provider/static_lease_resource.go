@@ -4,13 +4,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/chromedp/chromedp"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"log"
+	"strings"
 	"time"
+)
+
+var (
+	_ resource.Resource                = &StaticLeaseResource{}
+	_ resource.ResourceWithConfigure   = &StaticLeaseResource{}
+	_ resource.ResourceWithImportState = &StaticLeaseResource{}
 )
 
 type StaticLeaseResourceModel struct {
@@ -63,6 +71,11 @@ func (r *StaticLeaseResource) Configure(ctx context.Context, req resource.Config
 	r.client = client
 }
 
+func (r *StaticLeaseResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// We use the MAC address as the import identifier
+	resource.ImportStatePassthroughID(ctx, path.Root("mac_address"), req, resp)
+}
+
 func (r *StaticLeaseResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data StaticLeaseResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -87,6 +100,7 @@ func (r *StaticLeaseResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
+	log.Printf("[DEBUG] READ START - Target MAC: %s", state.MacAddress.ValueString())
 	var scrapedLease struct {
 		Hostname string `json:"hostname"`
 		IP       string `json:"ip"`
@@ -101,6 +115,7 @@ func (r *StaticLeaseResource) Read(ctx context.Context, req resource.ReadRequest
     if (!table) return { found: false };
 
     const rows = Array.from(table.querySelectorAll('tr'));
+    console.log("timing issue check. rows: " + rows.length);
     for (const row of rows) {
         // We look for the cell containing the MAC (Cell index 1)
         const macCell = row.cells[1];
@@ -119,18 +134,23 @@ func (r *StaticLeaseResource) Read(ctx context.Context, req resource.ReadRequest
 
 	log.Printf("[INFO] Reading existing state")
 	err := r.client.RunActions(ctx,
-		// chromedp.Click(`//li[@data-nodeid="systemstatus.lan"]/a`, chromedp.BySearch),
-		// chromedp.WaitVisible(`div.C_CSS_content_column`, chromedp.ByQuery),
 		chromedp.Click(`#TREENODE_0`, chromedp.ByID),
 		chromedp.WaitVisible(`li[data-nodeid="systemstatus.lan"] > a`, chromedp.ByQuery),
 		chromedp.Click(`li[data-nodeid="systemstatus.lan"] > a`, chromedp.ByQuery),
 		chromedp.Sleep(200*time.Millisecond),
+		chromedp.WaitVisible(`#BR\.1\.LEASES\.STATIC`, chromedp.ByID),
 		chromedp.WaitVisible(`#BRIDGE\.1\.STATICLEASES\.0\.INPUT`, chromedp.ByID),
+		chromedp.WaitVisible(`#HLP\.action\.newstaticlease\.ip`, chromedp.ByID),
+		// frontend seems to be quite slow to load the data into the table
+		chromedp.Sleep(500*time.Millisecond),
 
 		chromedp.Evaluate(jsExpression, &scrapedLease),
 	)
+	log.Printf("[DEBUG] READ RESULT - Found: %t, Host: %s, IP: %s",
+		scrapedLease.Found, scrapedLease.Hostname, scrapedLease.IP)
+
 	if err != nil || !scrapedLease.Found {
-		// If the lease is gone from the router, remove it from Terraform state
+		log.Printf("[WARN] Resource not found on router, removing from state")
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -139,8 +159,8 @@ func (r *StaticLeaseResource) Read(ctx context.Context, req resource.ReadRequest
 	state.Hostname = types.StringValue(scrapedLease.Hostname)
 	state.IpAddress = types.StringValue(scrapedLease.IP)
 	state.Enabled = types.BoolValue(scrapedLease.Enabled)
-	// MacAddress is our ID/Lookup key, so we don't overwrite it from the UI
-	// to avoid casing/formatting loops (e.g., AA vs aa)
+	state.MacAddress = types.StringValue(strings.ToLower(state.MacAddress.ValueString()))
+	state.Id = state.MacAddress
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -184,6 +204,10 @@ func (r *StaticLeaseResource) Delete(ctx context.Context, req resource.DeleteReq
 }
 
 func (r *StaticLeaseResource) deleteLeaseHelper(ctx context.Context, mac string) error {
+	var EntryFound bool
+	var overlayText string
+
+	log.Printf("[DEBUG] deleting lease of %s.", mac)
 	jsClickRemove := `
         (function(targetMac) {
             const table = document.getElementById('BR.1.LEASES.STATIC');
@@ -196,6 +220,7 @@ func (r *StaticLeaseResource) deleteLeaseHelper(ctx context.Context, mac string)
                         removeBtn.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
                         return true; 
                     }
+                }
             }
             return false;
         })("` + mac + `")`
@@ -206,9 +231,30 @@ func (r *StaticLeaseResource) deleteLeaseHelper(ctx context.Context, mac string)
 		chromedp.Click(`li[data-nodeid="systemstatus.lan"] > a`, chromedp.ByQuery),
 		chromedp.Sleep(200*time.Millisecond),
 		chromedp.WaitVisible(`#BRIDGE\.1\.STATICLEASES\.0\.INPUT`, chromedp.ByID),
-		chromedp.Evaluate(jsClickRemove, nil),
+		chromedp.Sleep(500*time.Millisecond),
+		chromedp.Evaluate(jsClickRemove, &EntryFound),
+		chromedp.Sleep(500*time.Millisecond),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			if EntryFound {
+				log.Printf("[DEBUG] Entry found for %s.", mac)
+				return nil
+			} else {
+				return fmt.Errorf("Existing lease not found.")
+			}
+		}),
 		chromedp.WaitVisible(`#btn_apply`, chromedp.ByID),
 		chromedp.Click(`#btn_apply`, chromedp.ByID),
+		chromedp.Sleep(200*time.Millisecond),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			log.Printf("[DEBUG] Clicked apply.")
+			return nil
+		}),
+		chromedp.WaitVisible(`#content_overlay_panel`, chromedp.ByID),
+		chromedp.Text(`#content_overlay_content`, &overlayText, chromedp.ByID),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			log.Printf("[DEBUG] Dialogue message: %s.", overlayText)
+			return nil
+		}),
 		chromedp.WaitVisible(`.C_CSS_flatbtn[value="Continue"]`, chromedp.ByQuery),
 		chromedp.Sleep(200*time.Millisecond),
 		chromedp.WaitNotVisible(`.C_CSS_LoadingDiv`, chromedp.ByQuery),
@@ -262,6 +308,8 @@ func (r *StaticLeaseResource) createLeaseHelper(ctx context.Context, data Static
 
 		// Router may refuse the config if it doesn't like the IP address
 		chromedp.ActionFunc(func(ctx context.Context) error {
+			log.Printf("[DEBUG] Dialogue message: %s.", overlayText)
+
 			if hasErrorBox {
 				log.Printf("[ERROR] Router reject config: %s. Starting cleanup.", overlayText)
 				if err := chromedp.Click(`.C_CSS_flatbtn[value="Continue"]`, chromedp.ByQuery).Do(ctx); err != nil {
