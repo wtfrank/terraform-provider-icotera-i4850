@@ -7,7 +7,7 @@ terraform {
 }
 
 provider "icotera-i4850" {
-  router_address = var.icotera_address
-  username = var.icotera_username
-  password = var.icotera_password
+  router_address = "192.168.1.1"
+  username = "admin"
+  password = "password"
 }

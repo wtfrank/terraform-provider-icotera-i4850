@@ -1,15 +1,16 @@
+// Package main is the entry point for the Icotera i4850 Terraform provider.
 package main
 
 import (
 	"context"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/francis-fisher/terraform-provider-icotera-i4850/internal/provider"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
 var (
-    version string = "dev"
+	version string = "dev"
 )
 
 func main() {

@@ -10,19 +10,19 @@ import (
 )
 
 type IcoteraClient struct {
-	Endpoint   string
-	Username   string
-	Password   string
-	lock       sync.Mutex // Critical for hardware with single-session UIs
-	AlertFound bool       // some errors are reported by alerts so this needs to be passed back
-	AlertMsg   string
+	RouterAddress string
+	Username      string
+	Password      string
+	lock          sync.Mutex // Critical for hardware with single-session UIs
+	AlertFound    bool       // some errors are reported by alerts so this needs to be passed back
+	AlertMsg      string
 }
 
-func NewIcoteraClient(endpoint, user, pass string) (*IcoteraClient, error) {
+func NewIcoteraClient(router_address, user, pass string) (*IcoteraClient, error) {
 	return &IcoteraClient{
-		Endpoint: endpoint,
-		Username: user,
-		Password: pass,
+		RouterAddress: router_address,
+		Username:      user,
+		Password:      pass,
 	}, nil
 }
 
@@ -69,7 +69,7 @@ func (c *IcoteraClient) RunActions(ctx context.Context, actions ...chromedp.Acti
 	})
 
 	return chromedp.Run(taskCtx, append([]chromedp.Action{
-		chromedp.Navigate("https://" + c.Endpoint + "/"),
+		chromedp.Navigate("https://" + c.RouterAddress + "/"),
 		chromedp.WaitVisible(`input[value="Log in"]`, chromedp.ByQuery),
 		chromedp.SendKeys(`input[name="username"]`, c.Username),
 		chromedp.SendKeys(`input[name="password"]`, c.Password),

@@ -35,24 +35,37 @@ type StaticLeaseResource struct {
 
 func (r *StaticLeaseResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	//resp.TypeName = req.ProviderTypeName + "_static_lease"
-	resp.TypeName = "icotera_i4850" + "_static_lease"
+	resp.TypeName = "icotera-i4850" + "_static_lease"
 }
 
 func (r *StaticLeaseResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: `Static DHCP Leases (IPv4)
+
+Allocate consistent IPv4 addresses to devices inside the network. Devices are identified by MAC address. Assigned addresses must be within the range of addresses defined by the IP address and netmask configured at Settings->LAN on the router webpage.
+`,
 		Attributes: map[string]schema.Attribute{
-			"id":       schema.StringAttribute{Computed: true},
-			"hostname": schema.StringAttribute{Required: true},
+			"id": schema.StringAttribute{
+				Description: "The ID of the entry (mac address)",
+				Computed:    true,
+			},
+			"hostname": schema.StringAttribute{
+				Description: "The local hostname of the device",
+				Required:    true},
 			"mac_address": schema.StringAttribute{
-				Required: true,
+				Description: "The mac address of the device that you wish to assign an ip address to",
+				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(), // Forces destroy/create if MAC changes
 				},
 			},
-			"ip_address": schema.StringAttribute{Required: true},
+			"ip_address": schema.StringAttribute{
+				Description: "The IPv4 address that you wish to assign to the device. Must be within the range IP address and netmask configured at Settings->LAN",
+				Required:    true},
 			"enabled": schema.BoolAttribute{
-				Optional: true,
-				Computed: true},
+				Description: "Whether this mapping is active",
+				Optional:    true,
+				Computed:    true},
 		},
 	}
 }

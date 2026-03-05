@@ -47,47 +47,61 @@ func NewPortForwardResource() resource.Resource {
 }
 
 func (r *PortForwardResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = "icotera_i4850" + "_port_forward"
+	resp.TypeName = "icotera-i4850" + "_port_forward"
 }
 
 func (r *PortForwardResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: `IPv4 Port Forwarding
+
+This resource sets up port forwarding rules that forward external requests to a particular port (or range of ports) to a single port on a device inside the network.
+
+The provider adds entries to the bottom of the port forward list in the router web interface, which visually separates automatic entries from any manually administered entries at the top of the page. The provider will not overwrite any enabled manual entries.`,
+
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:    true,
 				Description: "The 1-128 slot index on the router.",
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
-				Required: true,
+				Description: "A name for the forwarding rule",
+				Required:    true,
 			},
 			"protocol": schema.StringAttribute{
+				Description: "tcp, udp, or both",
 				Required:    true,
-				Description: "tco, udp, or both",
 				Validators: []validator.String{
 					stringvalidator.OneOf("tcp", "udp", "both"),
 				},
 			},
 			"external_port_start": schema.Int64Attribute{
-				Required:   true,
-				Validators: []validator.Int64{int64validator.Between(1, 65535)},
+				Description: "The lowest (or only) port in the external port range",
+				Required:    true,
+				Validators:  []validator.Int64{int64validator.Between(1, 65535)},
 			},
 			"external_port_end": schema.Int64Attribute{
+				Description: "The highest port of the external port range (can be left out when forwarding single ports)",
 				Required:    false,
 				Optional:    true,
 				Computed:    true,
-				Description: "The end of the external port range. Leave empty for a single port.",
 				Validators:  []validator.Int64{int64validator.Between(1, 65535)},
 			},
-			"internal_ip":   schema.StringAttribute{Required: true},
-			"internal_port": schema.Int64Attribute{Required: true},
+			"internal_ip": schema.StringAttribute{
+				Description: "The internal IPv4 address that incoming connections will be forwarded to",
+				Required:    true,
+			},
+			"internal_port": schema.Int64Attribute{
+				Description: "The internal port that external connections will be forwarded to",
+				Required:    true,
+			},
 			"loopback": schema.BoolAttribute{
+				Description: "Whether to also forward the port for requests from inside the network (so you could access a service via the external ip address whether inside or outside the network)",
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Whether to also forward the port for requests from inside the network",
 			},
 		},
 	}
@@ -317,11 +331,11 @@ func (r *PortForwardResource) Delete(ctx context.Context, req resource.DeleteReq
 		// You can disable it but this doesn't seem to reset the relevant fields.
 		// Setting ports or name to empty strings leads to a validation error.
 		// It would be desirable to allow entries to be configured but disabled,
-                // as we could then distinguish between entries a user had manually disabled,
-                // and entries that had been deleted in terraform.
-                // The best alternative is to stick terraform entries at the end of the list
-                // so that terraform will not immediately replace entries at the top of the
-                // list that the user might have disabled.
+		// as we could then distinguish between entries a user had manually disabled,
+		// and entries that had been deleted in terraform.
+		// The best alternative is to stick terraform entries at the end of the list
+		// so that terraform will not immediately replace entries at the top of the
+		// list that the user might have disabled.
 
 		r.syncCheckbox(fmt.Sprintf("I-NAT.PortMapping.%s.Enable", id), false),
 		chromedp.Sleep(200*time.Millisecond),
@@ -455,8 +469,8 @@ func (r *PortForwardResource) applyAndCheckErrorsActions(result *struct {
 
 		// Router seems to do some validation at apply
 		// for example, loopback with a port range selected
-                // Have added terraform validators that replicate this
-                // for better feedback
+		// Have added terraform validators that replicate this
+		// for better feedback
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			time.Sleep(300 * time.Millisecond)
 			if r.client.AlertFound {

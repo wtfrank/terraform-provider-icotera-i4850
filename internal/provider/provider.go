@@ -14,9 +14,9 @@ type icoteraProvider struct {
 }
 
 type icoteraProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
-	Username types.String `tfsdk:"username"`
-	Password types.String `tfsdk:"password"`
+	RouterAddress types.String `tfsdk:"router_address"`
+	Username      types.String `tfsdk:"username"`
+	Password      types.String `tfsdk:"password"`
 }
 
 var _ provider.Provider = &icoteraProvider{}
@@ -36,10 +36,23 @@ func (p *icoteraProvider) DataSources(ctx context.Context) []func() datasource.D
 
 func (p *icoteraProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: `The provider is used to control the Icotera i4850 domestic router, applying static DHCP leases, IPv4 port forwards and IPv6 firewall rules.
+
+It has been developed against the i4850-31 model but is expected to work with other variants.`,
 		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{Required: true},
-			"username": schema.StringAttribute{Required: true},
-			"password": schema.StringAttribute{Required: true, Sensitive: true},
+			"router_address": schema.StringAttribute{
+				Description: "The IPv4 address of the router.",
+				Required:    true,
+			},
+			"username": schema.StringAttribute{
+				Description: "The username to log into the router. Defaults to 'admin'.",
+				Required:    true,
+			},
+			"password": schema.StringAttribute{
+				Description: "The password used to log into the router.",
+				Required:    true,
+				Sensitive:   true,
+			},
 		},
 	}
 }
@@ -52,7 +65,7 @@ func (p *icoteraProvider) Configure(ctx context.Context, req provider.ConfigureR
 	}
 
 	client, err := NewIcoteraClient(
-		config.Endpoint.ValueString(),
+		config.RouterAddress.ValueString(),
 		config.Username.ValueString(),
 		config.Password.ValueString(),
 	)
