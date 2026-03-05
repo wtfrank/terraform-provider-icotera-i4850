@@ -34,9 +34,9 @@ func (c *IcoteraClient) RunActions(ctx context.Context, actions ...chromedp.Acti
 		chromedp.IgnoreCertErrors, // Bypasses the "No Certificate" warning
 		chromedp.NoSandbox,
 
-                // if the terraform plan application times out, being able
-                // to see the state of the webpage is extremely useful
-		chromedp.Flag("headless", false),
+		// if the terraform plan application times out, being able
+		// to see the state of the webpage is extremely useful
+		chromedp.Flag("headless", true),
 		chromedp.Flag("disable-gpu", true),
 	)
 
