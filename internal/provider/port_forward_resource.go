@@ -21,14 +21,14 @@ import (
 )
 
 var (
-	_ resource.Resource                = &PortForwardResource{}
-	_ resource.ResourceWithConfigure   = &PortForwardResource{}
-	_ resource.ResourceWithImportState = &PortForwardResource{}
-	_ resource.ResourceWithModifyPlan  = &PortForwardResource{}
+	_ resource.Resource                = &portForwardResource{}
+	_ resource.ResourceWithConfigure   = &portForwardResource{}
+	_ resource.ResourceWithImportState = &portForwardResource{}
+	_ resource.ResourceWithModifyPlan  = &portForwardResource{}
 )
 
-type PortForwardResourceModel struct {
-	Id                types.String `tfsdk:"id"` // 1-128
+type portForwardResourceModel struct {
+	ID                types.String `tfsdk:"id"` // 1-128
 	Name              types.String `tfsdk:"name"`
 	Protocol          types.String `tfsdk:"protocol"`
 	ExternalPortStart types.Int64  `tfsdk:"external_port_start"`
@@ -38,19 +38,17 @@ type PortForwardResourceModel struct {
 	Loopback          types.Bool   `tfsdk:"loopback"`
 }
 
-type PortForwardResource struct {
+type portForwardResource struct {
 	client *IcoteraClient
 }
 
-func NewPortForwardResource() resource.Resource {
-	return &PortForwardResource{}
+// Metadata returns the resource type name.
+func (r *portForwardResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_port_forward"
 }
 
-func (r *PortForwardResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = "icotera-i4850" + "_port_forward"
-}
-
-func (r *PortForwardResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+// Schema defines the schema for the resource.
+func (r *portForwardResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: `IPv4 Port Forwarding
 
@@ -107,7 +105,8 @@ The provider adds entries to the bottom of the port forward list in the router w
 	}
 }
 
-func (r *PortForwardResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+// Configure adds the provider-level client to the resource.
+func (r *portForwardResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -121,7 +120,8 @@ func (r *PortForwardResource) Configure(ctx context.Context, req resource.Config
 	r.client = client
 }
 
-func (r *PortForwardResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+// ConfigValidators returns a list of functions that validate the resource configuration.
+func (r *portForwardResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		portForwardConfigValidator{},
 	}
@@ -129,7 +129,7 @@ func (r *PortForwardResource) ConfigValidators(ctx context.Context) []resource.C
 
 type portForwardConfigValidator struct{}
 
-func (v portForwardConfigValidator) Description(ctx context.Context) string {
+func (v portForwardConfigValidator) Description(_ context.Context) string {
 	return "validates that loopback only uses a single port"
 }
 
@@ -138,7 +138,7 @@ func (v portForwardConfigValidator) MarkdownDescription(ctx context.Context) str
 }
 
 func (v portForwardConfigValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var data PortForwardResourceModel
+	var data portForwardResourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -159,8 +159,9 @@ func (v portForwardConfigValidator) ValidateResource(ctx context.Context, req re
 	}
 }
 
-func (r *PortForwardResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan PortForwardResourceModel
+// Update updates the resource and sets the updated Terraform state on success.
+func (r *portForwardResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan portForwardResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 
 	var applyResult struct {
@@ -168,7 +169,7 @@ func (r *PortForwardResource) Update(ctx context.Context, req resource.UpdateReq
 		Message string `json:"message"`
 	}
 
-	id := plan.Id.ValueString()
+	id := plan.ID.ValueString()
 
 	actions := append(
 		r.navigatePortForwardActions(),
@@ -192,12 +193,13 @@ func (r *PortForwardResource) Update(ctx context.Context, req resource.UpdateReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *PortForwardResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+// ImportState imports an existing resource into Terraform state (using the row in the port forward table as ID)
+func (r *portForwardResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-func (r *PortForwardResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state PortForwardResourceModel
+func (r *portForwardResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state portForwardResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -229,7 +231,7 @@ func (r *PortForwardResource) Read(ctx context.Context, req resource.ReadRequest
         enabled:       document.getElementById('I-NAT.PortMapping.' + id + '.Enable').checked,
         found:         true
     };
-})("` + state.Id.ValueString() + `")`
+})("` + state.ID.ValueString() + `")`
 
 	actions := append(r.navigatePortForwardActions(),
 		chromedp.Evaluate(jsScraper, &scraped))
@@ -258,10 +260,11 @@ func (r *PortForwardResource) Read(ctx context.Context, req resource.ReadRequest
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *PortForwardResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data PortForwardResourceModel
+// Create creates the resource and sets the initial Terraform state.
+func (r *portForwardResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data portForwardResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-	var discoveredId string
+	var discoveredID string
 
 	var applyResult struct {
 		IsError bool   `json:"isError"`
@@ -269,7 +272,7 @@ func (r *PortForwardResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	actions := append(r.navigatePortForwardActions(),
-		chromedp.ActionFunc(func(ctx context.Context) error {
+		chromedp.ActionFunc(func(_ context.Context) error {
 			log.Printf("[DEBUG] About to search for free slot.")
 			return nil
 		}),
@@ -281,13 +284,13 @@ func (r *PortForwardResource) Create(ctx context.Context, req resource.CreateReq
         		}
                 }
 		return "";
-		})()`, &discoveredId),
+		})()`, &discoveredID),
 		chromedp.ActionFunc(func(ctx context.Context) error {
-			if discoveredId == "" {
-				return fmt.Errorf("No available port forwarding slots found (max 128).")
+			if discoveredID == "" {
+				return fmt.Errorf("No available port forwarding slots found (max 128)")
 			}
-			log.Printf("[DEBUG] Found free slot %s", discoveredId)
-			setActions := r.setRowValues(discoveredId, data)
+			log.Printf("[DEBUG] Found free slot %s", discoveredID)
+			setActions := r.setRowValues(discoveredID, data)
 			for _, action := range setActions {
 				if err := action.Do(ctx); err != nil {
 					return err
@@ -313,15 +316,16 @@ func (r *PortForwardResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	data.Id = types.StringValue(discoveredId)
+	data.ID = types.StringValue(discoveredID)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *PortForwardResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data PortForwardResourceModel
+// Delete deletes the resource and removes the Terraform state on success
+func (r *portForwardResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data portForwardResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
-	id := data.Id.ValueString()
+	id := data.ID.ValueString()
 	var applyResult struct {
 		IsError bool   `json:"isError"`
 		Message string `json:"message"`
@@ -356,12 +360,13 @@ func (r *PortForwardResource) Delete(ctx context.Context, req resource.DeleteReq
 
 }
 
-func (r *PortForwardResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+// ModifyPlan normalises some of the plan fields
+func (r *portForwardResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.Plan.Raw.IsNull() {
 		return // Deletion
 	}
 
-	var plan PortForwardResourceModel
+	var plan portForwardResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 
 	// Normalization: Force protocol to lowercase
@@ -382,9 +387,9 @@ func (r *PortForwardResource) ModifyPlan(ctx context.Context, req resource.Modif
 }
 
 /* this always ensures the row is enabled in order to make it editable */
-func (r *PortForwardResource) setRowValues(id string, plan PortForwardResourceModel) []chromedp.Action {
+func (r *portForwardResource) setRowValues(id string, plan portForwardResourceModel) []chromedp.Action {
 	actions := []chromedp.Action{
-		chromedp.ActionFunc(func(ctx context.Context) error {
+		chromedp.ActionFunc(func(_ context.Context) error {
 			log.Printf("[DEBUG] setRowValues: %s", id)
 			return nil
 		}),
@@ -395,7 +400,7 @@ func (r *PortForwardResource) setRowValues(id string, plan PortForwardResourceMo
 	}
 	if plan.ExternalPortEnd.IsNull() {
 		actions = append(actions,
-			chromedp.ActionFunc(func(ctx context.Context) error {
+			chromedp.ActionFunc(func(_ context.Context) error {
 				log.Printf("[DEBUG] setRowValues external port end is null")
 				return nil
 			}),
@@ -406,7 +411,7 @@ func (r *PortForwardResource) setRowValues(id string, plan PortForwardResourceMo
 		)
 	} else {
 		actions = append(actions,
-			chromedp.ActionFunc(func(ctx context.Context) error {
+			chromedp.ActionFunc(func(_ context.Context) error {
 				log.Printf("[DEBUG] setRowValues external port end is %d", plan.ExternalPortEnd.ValueInt64())
 				return nil
 			}),
@@ -421,35 +426,35 @@ func (r *PortForwardResource) setRowValues(id string, plan PortForwardResourceMo
 	return actions
 }
 
-func (r *PortForwardResource) syncCheckbox(elementId string, desired bool) chromedp.Action {
+func (r *portForwardResource) syncCheckbox(elementID string, desired bool) chromedp.Action {
 	return chromedp.ActionFunc(func(ctx context.Context) error {
 		var isChecked bool
-		log.Printf("[DEBUG] Syncing checkbox %s to %t", elementId, desired)
-		expr := fmt.Sprintf(`document.getElementById('%s').checked`, elementId)
+		log.Printf("[DEBUG] Syncing checkbox %s to %t", elementID, desired)
+		expr := fmt.Sprintf(`document.getElementById('%s').checked`, elementID)
 		if err := chromedp.Evaluate(expr, &isChecked).Do(ctx); err != nil {
 			return err
 		}
 		if isChecked != desired {
-			return chromedp.Click("#"+strings.ReplaceAll(elementId, ".", "\\."), chromedp.ByQuery).Do(ctx)
+			return chromedp.Click("#"+strings.ReplaceAll(elementID, ".", "\\."), chromedp.ByQuery).Do(ctx)
 		}
 		return nil
 	})
 }
 
-func (r *PortForwardResource) navigatePortForwardActions() []chromedp.Action {
+func (r *portForwardResource) navigatePortForwardActions() []chromedp.Action {
 	return []chromedp.Action{
-		chromedp.ActionFunc(func(ctx context.Context) error {
+		chromedp.ActionFunc(func(_ context.Context) error {
 			log.Printf("[DEBUG] Navgating to port forward")
 			return nil
 		}),
 		chromedp.WaitVisible(`#TREENODE_4`, chromedp.ByID),
 		chromedp.WaitVisible(`#listcont_TREENODE_4_0`, chromedp.ByID),
-		chromedp.ActionFunc(func(ctx context.Context) error {
+		chromedp.ActionFunc(func(_ context.Context) error {
 			log.Printf("[DEBUG] About to click to port forward")
 			return nil
 		}),
 		chromedp.Click(`//li[@id="listcont_TREENODE_4_0"]//a[contains(text(), "Port Forwarding")]`, chromedp.BySearch),
-		chromedp.ActionFunc(func(ctx context.Context) error {
+		chromedp.ActionFunc(func(_ context.Context) error {
 			log.Printf("[DEBUG] waiting for port forward data to load")
 			return nil
 		}),
@@ -459,7 +464,7 @@ func (r *PortForwardResource) navigatePortForwardActions() []chromedp.Action {
 	}
 }
 
-func (r *PortForwardResource) applyAndCheckErrorsActions(result *struct {
+func (r *portForwardResource) applyAndCheckErrorsActions(result *struct {
 	IsError bool   `json:"isError"`
 	Message string `json:"message"`
 }) []chromedp.Action {
@@ -471,7 +476,7 @@ func (r *PortForwardResource) applyAndCheckErrorsActions(result *struct {
 		// for example, loopback with a port range selected
 		// Have added terraform validators that replicate this
 		// for better feedback
-		chromedp.ActionFunc(func(ctx context.Context) error {
+		chromedp.ActionFunc(func(_ context.Context) error {
 			time.Sleep(300 * time.Millisecond)
 			if r.client.AlertFound {
 				log.Printf("router alert: %s", r.client.AlertMsg)

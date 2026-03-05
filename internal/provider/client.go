@@ -1,3 +1,5 @@
+// Package provider contains the implementation of the Icotera i4850 Terraform provider,
+// including the client which scrapes the router webpage, and the resource definitions.
 package provider
 
 import (
@@ -9,6 +11,7 @@ import (
 	"sync"
 )
 
+// IcoteraClient interacts with the Icotera i4850 web interface
 type IcoteraClient struct {
 	RouterAddress string
 	Username      string
@@ -18,14 +21,16 @@ type IcoteraClient struct {
 	AlertMsg      string
 }
 
-func NewIcoteraClient(router_address, user, pass string) (*IcoteraClient, error) {
+// NewIcoteraClient initializes a new client for the Icotera router.
+func NewIcoteraClient(routerAddress, user, pass string) (*IcoteraClient, error) {
 	return &IcoteraClient{
-		RouterAddress: router_address,
+		RouterAddress: routerAddress,
 		Username:      user,
 		Password:      pass,
 	}, nil
 }
 
+// RunActions authenticates with the router and executes the provided chromedp actions
 func (c *IcoteraClient) RunActions(ctx context.Context, actions ...chromedp.Action) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()

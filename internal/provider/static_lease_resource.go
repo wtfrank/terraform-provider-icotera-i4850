@@ -16,29 +16,28 @@ import (
 )
 
 var (
-	_ resource.Resource                = &StaticLeaseResource{}
-	_ resource.ResourceWithConfigure   = &StaticLeaseResource{}
-	_ resource.ResourceWithImportState = &StaticLeaseResource{}
+	_ resource.Resource                = &staticLeaseResource{}
+	_ resource.ResourceWithConfigure   = &staticLeaseResource{}
+	_ resource.ResourceWithImportState = &staticLeaseResource{}
 )
 
-type StaticLeaseResourceModel struct {
+type staticLeaseResourceModel struct {
 	Hostname   types.String `tfsdk:"hostname"`
 	MacAddress types.String `tfsdk:"mac_address"`
-	IpAddress  types.String `tfsdk:"ip_address"`
+	IPAddress  types.String `tfsdk:"ip_address"`
 	Enabled    types.Bool   `tfsdk:"enabled"`
-	Id         types.String `tfsdk:"id"` // mac address
+	ID         types.String `tfsdk:"id"` // mac address
 }
 
-type StaticLeaseResource struct {
+type staticLeaseResource struct {
 	client *IcoteraClient
 }
 
-func (r *StaticLeaseResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	//resp.TypeName = req.ProviderTypeName + "_static_lease"
-	resp.TypeName = "icotera-i4850" + "_static_lease"
+func (r *staticLeaseResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_static_lease"
 }
 
-func (r *StaticLeaseResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *staticLeaseResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: `Static DHCP Leases (IPv4)
 
@@ -70,7 +69,7 @@ Allocate consistent IPv4 addresses to devices inside the network. Devices are id
 	}
 }
 
-func (r *StaticLeaseResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *staticLeaseResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -84,13 +83,13 @@ func (r *StaticLeaseResource) Configure(ctx context.Context, req resource.Config
 	r.client = client
 }
 
-func (r *StaticLeaseResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *staticLeaseResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// We use the MAC address as the import identifier
 	resource.ImportStatePassthroughID(ctx, path.Root("mac_address"), req, resp)
 }
 
-func (r *StaticLeaseResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data StaticLeaseResourceModel
+func (r *staticLeaseResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data staticLeaseResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -102,12 +101,12 @@ func (r *StaticLeaseResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	data.Id = data.MacAddress
+	data.ID = data.MacAddress
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *StaticLeaseResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state StaticLeaseResourceModel
+func (r *staticLeaseResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state staticLeaseResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -117,7 +116,7 @@ func (r *StaticLeaseResource) Read(ctx context.Context, req resource.ReadRequest
 	var scrapedLease struct {
 		Hostname string `json:"hostname"`
 		IP       string `json:"ip"`
-		Enabled  bool   `json:enabled"`
+		Enabled  bool   `json:"enabled"`
 		Found    bool   `json:"found"`
 	}
 
@@ -170,15 +169,15 @@ func (r *StaticLeaseResource) Read(ctx context.Context, req resource.ReadRequest
 
 	// Update state with what we actually found on the router
 	state.Hostname = types.StringValue(scrapedLease.Hostname)
-	state.IpAddress = types.StringValue(scrapedLease.IP)
+	state.IPAddress = types.StringValue(scrapedLease.IP)
 	state.Enabled = types.BoolValue(scrapedLease.Enabled)
 	state.MacAddress = types.StringValue(strings.ToLower(state.MacAddress.ValueString()))
-	state.Id = state.MacAddress
+	state.ID = state.MacAddress
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *StaticLeaseResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan, state StaticLeaseResourceModel
+func (r *staticLeaseResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state staticLeaseResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -198,12 +197,12 @@ func (r *StaticLeaseResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	plan.Id = plan.MacAddress
+	plan.ID = plan.MacAddress
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *StaticLeaseResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data StaticLeaseResourceModel
+func (r *staticLeaseResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data staticLeaseResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -216,7 +215,7 @@ func (r *StaticLeaseResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 }
 
-func (r *StaticLeaseResource) deleteLeaseHelper(ctx context.Context, mac string) error {
+func (r *staticLeaseResource) deleteLeaseHelper(ctx context.Context, mac string) error {
 	var EntryFound bool
 	var overlayText string
 
@@ -247,24 +246,23 @@ func (r *StaticLeaseResource) deleteLeaseHelper(ctx context.Context, mac string)
 		chromedp.Sleep(500*time.Millisecond),
 		chromedp.Evaluate(jsClickRemove, &EntryFound),
 		chromedp.Sleep(500*time.Millisecond),
-		chromedp.ActionFunc(func(ctx context.Context) error {
+		chromedp.ActionFunc(func(_ context.Context) error {
 			if EntryFound {
 				log.Printf("[DEBUG] Entry found for %s.", mac)
 				return nil
-			} else {
-				return fmt.Errorf("Existing lease not found.")
 			}
+			return fmt.Errorf("Existing lease not found")
 		}),
 		chromedp.WaitVisible(`#btn_apply`, chromedp.ByID),
 		chromedp.Click(`#btn_apply`, chromedp.ByID),
 		chromedp.Sleep(200*time.Millisecond),
-		chromedp.ActionFunc(func(ctx context.Context) error {
+		chromedp.ActionFunc(func(_ context.Context) error {
 			log.Printf("[DEBUG] Clicked apply.")
 			return nil
 		}),
 		chromedp.WaitVisible(`#content_overlay_panel`, chromedp.ByID),
 		chromedp.Text(`#content_overlay_content`, &overlayText, chromedp.ByID),
-		chromedp.ActionFunc(func(ctx context.Context) error {
+		chromedp.ActionFunc(func(_ context.Context) error {
 			log.Printf("[DEBUG] Dialogue message: %s.", overlayText)
 			return nil
 		}),
@@ -277,7 +275,7 @@ func (r *StaticLeaseResource) deleteLeaseHelper(ctx context.Context, mac string)
 	)
 }
 
-func (r *StaticLeaseResource) createLeaseHelper(ctx context.Context, data StaticLeaseResourceModel) error {
+func (r *staticLeaseResource) createLeaseHelper(ctx context.Context, data staticLeaseResourceModel) error {
 	var overlayText string
 	var hasErrorBox bool
 
@@ -288,7 +286,7 @@ func (r *StaticLeaseResource) createLeaseHelper(ctx context.Context, data Static
 		chromedp.Sleep(200 * time.Millisecond),
 		chromedp.WaitVisible(`#BRIDGE\.1\.STATICLEASES\.0\.INPUT`, chromedp.ByID),
 
-		chromedp.SetValue(`#HLP\.action\.newstaticlease\.ip`, data.IpAddress.ValueString(), chromedp.ByID),
+		chromedp.SetValue(`#HLP\.action\.newstaticlease\.ip`, data.IPAddress.ValueString(), chromedp.ByID),
 		chromedp.SetValue(`#HLP\.action\.newstaticlease\.mac`, data.MacAddress.ValueString(), chromedp.ByID),
 		chromedp.SetValue(`#HLP\.action\.newstaticlease\.host`, data.Hostname.ValueString(), chromedp.ByID),
 	}
@@ -303,7 +301,7 @@ func (r *StaticLeaseResource) createLeaseHelper(ctx context.Context, data Static
 		chromedp.Click(`tr#BRIDGE\.1\.STATICLEASES\.0\.INPUT input[value="Add"]`, chromedp.ByQuery),
 
 		// Router may refuse the entry via an alert box if there's an existing entry
-		chromedp.ActionFunc(func(ctx context.Context) error {
+		chromedp.ActionFunc(func(_ context.Context) error {
 			time.Sleep(300 * time.Millisecond)
 			if r.client.AlertFound {
 				log.Printf("router alert: %s", r.client.AlertMsg)

@@ -21,16 +21,21 @@ type icoteraProviderModel struct {
 
 var _ provider.Provider = &icoteraProvider{}
 
-func New() provider.Provider {
-	return &icoteraProvider{}
+// New returns a function that initializes a new provider instance.
+func New(version string) func() provider.Provider {
+	return func() provider.Provider {
+		return &icoteraProvider{
+			version: version,
+		}
+	}
 }
 
-func (p *icoteraProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+func (p *icoteraProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "icotera-i4850"
 	resp.Version = p.version
 }
 
-func (p *icoteraProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (p *icoteraProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return nil
 }
 
@@ -78,10 +83,9 @@ func (p *icoteraProvider) Configure(ctx context.Context, req provider.ConfigureR
 	resp.ResourceData = client
 }
 
-func (p *icoteraProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (p *icoteraProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		func() resource.Resource { return &StaticLeaseResource{} },
-		func() resource.Resource { return &PortForwardResource{} },
-		//        func() resource.Resource { return *DhcpResource{} },
+		func() resource.Resource { return &staticLeaseResource{} },
+		func() resource.Resource { return &portForwardResource{} },
 	}
 }

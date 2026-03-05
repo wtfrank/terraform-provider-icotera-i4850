@@ -5,12 +5,13 @@ import (
 	"context"
 	"log"
 
-	"github.com/francis-fisher/terraform-provider-icotera-i4850/internal/provider"
+	icoteraprovider "github.com/francis-fisher/terraform-provider-icotera-i4850/internal/provider"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
 var (
-	version string = "dev"
+	version = "dev"
 )
 
 func main() {
@@ -18,7 +19,9 @@ func main() {
 		Address: "registry.terraform.io/francis-fisher/icotera-i4850",
 	}
 
-	err := providerserver.Serve(context.Background(), provider.New, opts)
+	err := providerserver.Serve(context.Background(), func() provider.Provider {
+		return icoteraprovider.New(version)()
+	}, opts)
 
 	if err != nil {
 		log.Fatal(err.Error())
