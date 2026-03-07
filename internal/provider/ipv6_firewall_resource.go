@@ -198,7 +198,7 @@ func (r *iPv6FirewallResource) Update(ctx context.Context, req resource.UpdateRe
 		r.navigateIPv6FirewallActions(),
 		r.setRowValues(id, plan)...)
 
-	actions = append(actions, r.applyAndCheckErrorsActions(&applyResult)...)
+	actions = append(actions, applyAndCheckErrorsActions(r.client, &applyResult)...)
 
 	if err := r.client.RunActions(ctx, actions...); err != nil {
 		resp.Diagnostics.AddError("Update Error", err.Error())
@@ -360,7 +360,7 @@ func (r *iPv6FirewallResource) Create(ctx context.Context, req resource.CreateRe
 			return nil
 		}),
 	)
-	actions = append(actions, r.applyAndCheckErrorsActions(&applyResult)...)
+	actions = append(actions, applyAndCheckErrorsActions(r.client, &applyResult)...)
 
 	err := r.client.RunActions(ctx, actions...)
 	if err != nil {
@@ -405,7 +405,7 @@ func (r *iPv6FirewallResource) Delete(ctx context.Context, req resource.DeleteRe
 		chromedp.Sleep(200*time.Millisecond),
 	)
 
-	actions = append(actions, r.applyAndCheckErrorsActions(&applyResult)...)
+	actions = append(actions, applyAndCheckErrorsActions(r.client, &applyResult)...)
 
 	err := r.client.RunActions(ctx, actions...)
 
@@ -537,48 +537,5 @@ func (r *iPv6FirewallResource) navigateIPv6FirewallActions() []chromedp.Action {
 		// The fields seem to be disabled initially. There is a shorter delay while
 		// data loads into the page
 		chromedp.Poll(`!document.getElementById('I-Firewall.Enable').disabled`, nil),
-	}
-}
-
-func (r *iPv6FirewallResource) applyAndCheckErrorsActions(result *struct {
-	IsError bool   `json:"isError"`
-	Message string `json:"message"`
-}) []chromedp.Action {
-	return []chromedp.Action{
-		chromedp.WaitVisible(`#btn_apply`, chromedp.ByID),
-		chromedp.Click(`#btn_apply`, chromedp.ByID),
-
-		// Router seems to do some validation at apply
-		// for example, loopback with a port range selected
-		// Have added terraform validators that replicate this
-		// for better feedback
-		chromedp.ActionFunc(func(_ context.Context) error {
-			time.Sleep(300 * time.Millisecond)
-			if r.client.AlertFound {
-				log.Printf("router alert: %s", r.client.AlertMsg)
-				return fmt.Errorf("halting: router alert: %s", r.client.AlertMsg)
-			}
-			return nil
-		}),
-
-		chromedp.WaitVisible(`#content_overlay_panel`, chromedp.ByID),
-
-		chromedp.Evaluate(`(function() {
-			const reportBox = document.querySelector('.C_CSS_MsgReportBox');
-			if (reportBox && reportBox.innerText.trim().length > 0) {
-				return {
-					isError: true,
-					message: reportBox.innerText.trim()
-				};
-			}
-			return { isError: false, message: "" };
-		})()`, result),
-
-		chromedp.WaitVisible(`.C_CSS_flatbtn[value="Continue"]`, chromedp.ByQuery),
-		chromedp.Sleep(200 * time.Millisecond),
-		chromedp.WaitNotVisible(`.C_CSS_LoadingDiv`, chromedp.ByQuery),
-		chromedp.Click(`.C_CSS_flatbtn[value="Continue"]`, chromedp.ByQuery),
-		chromedp.WaitNotVisible(`#content_overlay`, chromedp.ByID),
-		chromedp.Sleep(200 * time.Millisecond),
 	}
 }
