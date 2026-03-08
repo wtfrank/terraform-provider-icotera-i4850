@@ -459,5 +459,8 @@ func (r *portForwardResource) navigatePortForwardActions() []chromedp.Action {
 
 		chromedp.WaitVisible(`#PORTFWD\.DATA_ROW\.1\.`, chromedp.ByID),
 		chromedp.Sleep(400 * time.Millisecond),
+		chromedp.WaitVisible(`#I-NAT\.PortMapping\.1\.Enable`, chromedp.ByID),
+		chromedp.WaitNotVisible(`#content_overlay`, chromedp.ByID),
+		chromedp.Sleep(1 * time.Second), // Brief pause for JS to bind events to the inputs
 	}
 }

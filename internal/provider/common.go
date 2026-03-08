@@ -43,10 +43,13 @@ func applyAndCheckErrorsActions(client *IcoteraClient, result *struct {
 		})()`, result),
 
 		chromedp.WaitVisible(`.C_CSS_flatbtn[value="Continue"]`, chromedp.ByQuery),
-		chromedp.Sleep(200 * time.Millisecond),
+		chromedp.Sleep(500 * time.Millisecond),
 		chromedp.WaitNotVisible(`.C_CSS_LoadingDiv`, chromedp.ByQuery),
+		chromedp.Sleep(100 * time.Millisecond),
 		chromedp.Click(`.C_CSS_flatbtn[value="Continue"]`, chromedp.ByQuery),
 		chromedp.WaitNotVisible(`#content_overlay`, chromedp.ByID),
-		chromedp.Sleep(200 * time.Millisecond),
+		chromedp.WaitNotVisible(`.C_CSS_LoadingDiv`, chromedp.ByQuery),
+		// big cooldown to give the router time to breathe
+		chromedp.Sleep(2000 * time.Millisecond),
 	}
 }
