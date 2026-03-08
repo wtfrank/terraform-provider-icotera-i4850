@@ -1,15 +1,23 @@
-resource "icotera-i4850_static_lease" "example" {
-  hostname    = "printer"
+resource "icotera-i4850_static_lease" "sl_example_1" {
+  hostname    = "example_host_1"
   mac_address = "00:11:22:33:44:55"
   ip_address  = "172.16.50.50"
   enabled     = "true"
 }
 
+resource "icotera-i4850_static_lease" "sl_example_2" {
+  hostname    = "example_host_2"
+  mac_address = "11:22:33:44:55:66"
+  ip_address  = "172.16.50.51"
+  enabled     = "true"
+}
+
+
 # the provider will fill entries from the bottom of the port forward list
 # in the router web interface. This will visually separate automatic
 # entries from any manually administered ones at the top of the page.
-resource "icotera-i4850_port_forward" "example1" {
-  name = "example1"
+resource "icotera-i4850_port_forward" "pf_example_1" {
+  name = "pf_example_1"
   protocol = "udp"
   external_port_start = "5154"
   external_port_end = "5154" # you don't need to specify external_port end if you only want a single port
@@ -18,8 +26,18 @@ resource "icotera-i4850_port_forward" "example1" {
   loopback = false
 }
 
-resource "icotera-i4850_ipv6_firewall" "example2" {
-  name = "example2"
+resource "icotera-i4850_port_forward" "pf_example_2" {
+  name = "pf_example_2"
+  protocol = "udp"
+  external_port_start = "6154"
+  internal_ip = "172.16.40.41"
+  internal_port = "6154"
+  loopback = false
+}
+
+
+resource "icotera-i4850_ipv6_firewall" "fw_example_1" {
+  name = "fw_example_1"
   protocol = "tcp"
   port_start = 555
   port_end = 555
@@ -31,12 +49,11 @@ resource "icotera-i4850_ipv6_firewall" "example2" {
   destination_prefix_length = 0
 }
 
-resource "icotera-i4850_ipv6_firewall" "example3" {
-  name = "example3"
+resource "icotera-i4850_ipv6_firewall" "fw_example_2" {
+  name = "fw_example_2"
   protocol = "udp"
   port_start = 558
 
   destination_ip = "::"
   destination_prefix_length = 128
-
 }
