@@ -43,7 +43,7 @@ func (p *icoteraProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 	resp.Schema = schema.Schema{
 		Description: `The provider is used to control the Icotera i4850 domestic router, applying static DHCP leases, IPv4 port forwards and IPv6 firewall rules.
 
-It has been developed against the i4850-31 model but is expected to work with other variants.`,
+It has been developed against the i4850-31 model in a homelab environment but is expected to work with other variants.`,
 		Attributes: map[string]schema.Attribute{
 			"router_address": schema.StringAttribute{
 				Description: "The IPv4 address of the router.",
