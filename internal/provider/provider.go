@@ -17,7 +17,7 @@ type icoteraProviderModel struct {
 	RouterAddress types.String `tfsdk:"router_address"`
 	Username      types.String `tfsdk:"username"`
 	Password      types.String `tfsdk:"password"`
-}
+
 
 var _ provider.Provider = &icoteraProvider{}
 
@@ -43,7 +43,9 @@ func (p *icoteraProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 	resp.Schema = schema.Schema{
 		Description: `The provider is used to control the Icotera i4850 domestic router, applying static DHCP leases, IPv4 port forwards and IPv6 firewall rules.
 
-It has been developed against the i4850-31 model in a homelab environment but is expected to work with other variants.`,
+If you already use terraform to spin up a VM or pod, you can use this provider to assign static ip addresses, port forwards and firewall rules to the newly created VM or pod.
+
+It has been developed against the i4850-31 model in a homelab environment but is expected to work with other variants of the i4850.`,
 		Attributes: map[string]schema.Attribute{
 			"router_address": schema.StringAttribute{
 				Description: "The IPv4 address of the router.",
