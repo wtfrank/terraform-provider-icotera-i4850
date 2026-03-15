@@ -41,11 +41,11 @@ func (p *icoteraProvider) DataSources(_ context.Context) []func() datasource.Dat
 
 func (p *icoteraProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: `The provider is used to control the Icotera i4850 domestic router, applying static DHCP leases, IPv4 port forwards and IPv6 firewall rules.
+		Description: `The provider is used to control the Icotera i4850 domestic router, allowing Terraform to modify DHCP settings, IPv4 port forwards and IPv6 firewall rules.
 
-If you already use terraform to spin up a VM or pod, you can use this provider to assign static ip addresses, port forwards and firewall rules to the newly created VM or pod.
+If you already use Terraform to spin up VMs or pods in a homelab environment, you could use this provider to configure static ip addresses, port forwards and firewall rules.
 
-It has been developed against the i4850-31 model in a homelab environment but is expected to work with other variants of the i4850.`,
+It has been developed against the i4850-31 model but is expected to work with other variants of the i4850 such as the i4850-20 and i4850-25. It may work with other similar models such as the i6850 - let me know if you try one of these!`,
 		Attributes: map[string]schema.Attribute{
 			"router_address": schema.StringAttribute{
 				Description: "The IPv4 address of the router.",

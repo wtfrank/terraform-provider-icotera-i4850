@@ -57,3 +57,16 @@ resource "icotera-i4850_ipv6_firewall" "fw_example_2" {
   destination_ip = "::"
   destination_prefix_length = 128
 }
+
+resource "icotera-i4850_lan_settings" "example_lan_settings" {
+  dhcp_enabled    = true
+  pool_start      = "172.16.4.5"
+  pool_end        = "172.16.4.250"
+  lease_time      = 86400
+  max_lease_time  = 86400
+  primary_dns     = "1.0.0.1"
+  secondary_dns   = "1.1.1.1"
+  wins_server     = "0.0.0.0"
+  gateway         = "172.16.4.1"
+  ipv6_ra_enabled = true
+}

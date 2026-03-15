@@ -41,8 +41,7 @@ func (r *staticLeaseResource) Schema(_ context.Context, _ resource.SchemaRequest
 	resp.Schema = schema.Schema{
 		Description: `Static DHCP Leases (IPv4)
 
-Allocate consistent IPv4 addresses to devices inside the network. Devices are identified by MAC address. Assigned addresses must be within the range of addresses defined by the IP address and netmask configured at Settings->LAN on the router webpage.
-`,
+Allocate consistent IPv4 addresses to devices inside the network. Devices are identified by MAC address. Assigned addresses must be within the range of addresses defined by the IP address and netmask configured via the icotera-i4850_lan_settings resource or at Settings->LAN on the router webpage.`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The ID of the entry (mac address)",
