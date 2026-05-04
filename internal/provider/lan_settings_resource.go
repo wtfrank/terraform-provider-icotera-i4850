@@ -122,7 +122,7 @@ func (r *lanSettingsResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Required:    true,
 			},
 			"ipv6_ra_enabled": schema.BoolAttribute{
-				Description: "Whether IPv6 Router Advertisement is enabled. This allows devices to be assigned globally routable (subject to firewall rules) IPV6 addresses and IPv6 DNS servers. Note that the IPv6 DNS servers cannot be configured in the router.",
+				Description: "Whether IPv6 Router Advertisement is enabled. This allows devices to be assigned globally routable (subject to firewall rules) IPV6 addresses and IPv6 DNS servers. Note that the IPv6 DNS servers cannot be configured in the router - the ISP-provided dns servers will always be propagated. Disabling this setting seems to disable outbound IPv6 routing.",
 				Required:    true,
 			},
 		},
